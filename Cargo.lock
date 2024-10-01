@@ -120,6 +120,9 @@ version = "0.1.0"
 [[package]]
 name = "assoc_vs_generic"
 version = "0.1.0"
+dependencies = [
+ "num-traits",
+]
 
 [[package]]
 name = "async_fn"
