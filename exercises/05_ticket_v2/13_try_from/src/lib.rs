@@ -22,14 +22,11 @@ impl TryFrom<String> for Status {
     type Error = String;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
-        if value.to_lowercase() == "todo" {
-            Ok(ToDo)
-        } else if value.to_lowercase() == "inprogress" {
-            Ok(InProgress)
-        } else if value.to_lowercase() == "done" {
-            Ok(Done)
-        } else {
-            Err("Should be one of: todo, inprogress, done".to_string())
+        match value.to_lowercase().as_str() {
+            "todo" => Ok(ToDo),
+            "inprogress" => Ok(InProgress),
+            "done" => Ok(Done),
+            _ => Err("Should be one of: todo, inprogress, done".to_string()),
         }
     }
 }
