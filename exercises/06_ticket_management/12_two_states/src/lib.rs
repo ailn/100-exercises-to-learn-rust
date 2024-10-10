@@ -10,6 +10,7 @@ use ticket_fields::{TicketDescription, TicketTitle};
 
 #[derive(Clone)]
 pub struct TicketStore {
+    sequence: u64,
     tickets: Vec<Ticket>,
 }
 
@@ -38,20 +39,46 @@ pub enum Status {
 }
 
 impl TicketStore {
+    fn next_id(&mut self) -> TicketId {
+        let id = TicketId(self.sequence);
+        self.sequence += 1;
+        id
+    }
+
     pub fn new() -> Self {
         Self {
             tickets: Vec::new(),
+            sequence: 0
         }
     }
 
-    pub fn add_ticket(&mut self, ticket: Ticket) {
+    pub fn add_ticket(&mut self, ticket_draft: TicketDraft) -> TicketId {
+        let id = self.next_id();
+        let ticket = Ticket {
+            id,
+            title: ticket_draft.title,
+            description: ticket_draft.description,
+            status: Status::ToDo
+        };
         self.tickets.push(ticket);
+
+        id
+    }
+
+    pub fn get(&self, id: TicketId) -> Option<&Ticket> {
+        for ticket in self.tickets.iter() {
+            if ticket.id == id {
+                return Some(ticket);
+            }
+        }
+
+        None
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{Status, TicketDraft, TicketStore};
+    use crate::{Status, TicketDraft, TicketId, TicketStore};
     use ticket_fields::test_helpers::{ticket_description, ticket_title};
 
     #[test]
@@ -76,5 +103,10 @@ mod tests {
         let ticket2 = store.get(id2).unwrap();
 
         assert_ne!(id1, id2);
+
+        let id3 = TicketId(100);
+        let ticket3 = store.get(id3);
+
+        assert_eq!(Option::None, ticket3)
     }
 }
