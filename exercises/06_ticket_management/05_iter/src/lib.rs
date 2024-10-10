@@ -37,6 +37,15 @@ impl TicketStore {
     } 
 }
 
+impl<'a> IntoIterator for &'a TicketStore {
+    type Item = &'a Ticket;
+    type IntoIter = Iter<'a, Ticket>; // What goes here?
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.tickets.iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -61,7 +70,7 @@ mod tests {
         store.add_ticket(ticket);
 
         let tickets: Vec<&Ticket> = store.iter().collect();
-        let tickets2: Vec<&Ticket> = store.iter().collect();
+        let tickets2: Vec<&Ticket> = IntoIterator::into_iter(&store).collect(); // store.iter().collect();
         assert_eq!(tickets, tickets2);
     }
 }
