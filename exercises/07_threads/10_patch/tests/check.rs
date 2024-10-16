@@ -1,5 +1,5 @@
 use patch::data::{Status, TicketDraft, TicketPatch};
-use patch::launch;
+use patch::{launch};
 use ticket_fields::test_helpers::{ticket_description, ticket_title};
 
 #[test]
@@ -22,10 +22,21 @@ fn works() {
         title: None,
         description: None,
         status: Some(Status::InProgress),
+        version: ticket.version
     };
-    client.update(patch).unwrap();
+    assert!(client.update(patch).unwrap().is_none());
 
     let ticket = client.get(ticket_id).unwrap().unwrap();
     assert_eq!(ticket.id, ticket_id);
     assert_eq!(ticket.status, Status::InProgress);
+
+    // verify optimistic concurrency case
+    let patch = TicketPatch {
+        id: ticket_id,
+        title: None,
+        description: None,
+        status: Some(Status::InProgress),
+        version: ticket.version - 1
+    };
+    assert!(client.update(patch).unwrap().is_some());
 }

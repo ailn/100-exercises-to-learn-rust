@@ -35,7 +35,7 @@ impl TicketStoreClient {
         Ok(response_receiver.recv().unwrap())
     }
 
-    pub fn update(&self, ticket_patch: TicketPatch) -> Result<(), OverloadedError> {
+    pub fn update(&self, ticket_patch: TicketPatch) -> Result<Option<OptimisticConcurrencyError>, OverloadedError> {
         let (response_sender, response_receiver) = sync_channel(1);
         self.sender
             .try_send(Command::Update {
@@ -51,6 +51,10 @@ impl TicketStoreClient {
 #[derive(Debug, thiserror::Error)]
 #[error("The store is overloaded")]
 pub struct OverloadedError;
+
+#[derive(Debug, thiserror::Error)]
+#[error("The ticket you are updating on has been modified")]
+pub struct OptimisticConcurrencyError;
 
 pub fn launch(capacity: usize) -> TicketStoreClient {
     let (sender, receiver) = sync_channel(capacity);
@@ -69,7 +73,7 @@ enum Command {
     },
     Update {
         patch: TicketPatch,
-        response_channel: SyncSender<()>,
+        response_channel: SyncSender<Option<OptimisticConcurrencyError>>,
     },
 }
 
@@ -96,16 +100,24 @@ pub fn server(receiver: Receiver<Command>) {
                 response_channel,
             }) => {
                 if let Some(ticket) = store.get_mut(patch.id) {
+                    if patch.version != ticket.version {
+                        let _= response_channel.send(Some(OptimisticConcurrencyError));
+                        return;
+                    }
                     if let Some(status) = patch.status {
                         ticket.status = status;
+                        ticket.version = patch.version + 1;
                     }
                     if let Some(title) = patch.title {
                         ticket.title = title;
+                        ticket.version = patch.version + 1;
                     }
                     if let Some(description) = patch.description {
                         ticket.description = description;
+                        ticket.version = patch.version + 1;
                     }
-                    let _ = response_channel.send(());
+
+                    let _ = response_channel.send(None);
                 }
             }
             Err(_) => {
